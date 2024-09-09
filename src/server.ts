@@ -17,7 +17,7 @@ app.set('view engine', 'html');
 
 app.use(router);
 
-let port = 1337;
+let port = 7331;
 if (process.argv[2] === '--port' && process.argv[3]) {
     port = parseInt(process.argv[3], 10);
 }
