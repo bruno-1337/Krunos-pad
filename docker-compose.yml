@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7331:7331"  # Exposing your app's port to the host
+    environment:
+      NODE_ENV: production  # Setting the environment to production
