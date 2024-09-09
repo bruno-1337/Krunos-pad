@@ -18,3 +18,12 @@ output:
 ```
 📝 KrunosPad works on port 1337 📝
 ```
+
+
+## Roadmap
+
+```
+- Add Password option
+- Add a option to change font size
+- Get timestamps of each update so people don't overwrite each other
+```
