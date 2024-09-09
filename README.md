@@ -29,4 +29,15 @@ Run the application:
 docker-compose up
 ```
 
-By default the app runs on port 7331 but you can change it by ussing the argument --port or by editing the ```server.ts``` file
+## Configurations
+
+By default the app runs on port 7331 but you can change it by using the argument --port or by editing the ```server.ts``` file
+
+## Roadmap
+
+```
+- Add Password option
+- Add a option to change font size
+- Get timestamps of each update so people don't overwrite each other
+```
+
