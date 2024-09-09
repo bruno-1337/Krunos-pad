@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="/socket.io/socket.io.js"></script>
-    <link rel="stylesheet" href="/css/bootstrap.min.css" >
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
     <title>KrunosPad</title>
+    <script>
+        document.title = window.location.pathname;
+        document.title = document.title.replace('/','');
+        document.title = document.title + ' | KPad';
+    </script>
 </head>
 <body>
     <textarea name="" id="input-area" cols="30" onkeyup="sendData()"  rows="10">

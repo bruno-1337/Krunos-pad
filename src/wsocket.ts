@@ -1,4 +1,5 @@
 import urlToDotPath from './helper'; // Adjust to default import
+import { Socket } from 'socket.io'; // Import the 'Socket' type
 
 import Pad from './Models/Pad';
 
