@@ -1,15 +1,27 @@
-import urlToDotPath from './helper'; // Adjust to default import
-import { Socket } from 'socket.io'; // Import the 'Socket' type
-
+import urlToDotPath from './helper';
+import { Socket } from 'socket.io';
 import Pad from './Models/Pad';
 
 export default (socket: Socket) => {
-    socket.on('update', (data) => {
-        data.path = urlToDotPath(data.path); // Use the default function
-        const pad = new Pad();
-        pad.save(data);
-        socket.broadcast.emit('update', data);
-    });
+  socket.on('update', async (data) => {
+    data.path = urlToDotPath(data.path);
+    const pad = new Pad();
 
-    console.log('A user connected');
+    data.padData = {
+      content: data.content,
+      lastUpdated: new Date().toISOString()
+    };
+
+    await pad.save({ path: data.path, padData: data.padData });
+    socket.broadcast.emit('update', data);
+  });
+
+  socket.on('setPassword', async (data) => {
+    data.path = urlToDotPath(data.path);
+    const pad = new Pad();
+    await pad.setPassword(data.path, data.password);
+    socket.emit('passwordSet', { success: true });
+  });
+
+  console.log('A user connected');
 };
