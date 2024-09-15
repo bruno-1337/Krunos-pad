@@ -5,16 +5,17 @@ FROM oven/bun:latest
 WORKDIR /app
 
 # Copy package.json and bun.lockb (for dependencies) to the working directory
-COPY package.json bun.lockb ./
+COPY package.json bun.lockb tsconfig.json ./
 
 # Install dependencies
 RUN bun install
 
 # Copy the rest of your application code
-COPY . .
+COPY src ./src
+COPY views ./views
 
 # Expose the port that BunJS runs on (7331 in your case)
 EXPOSE 7331
 
 # Set the command to run the BunJS application
-CMD ["bun", "run", "start"]
+CMD ["bun", "src/server.ts"]

@@ -5,48 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="/socket.io/socket.io.js"></script>
-    <link rel="stylesheet" href="/css/bootstrap.min.css" >
+    <script src="/js/main.js" defer></script>
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
     <title>KrunosPad</title>
 </head>
 <body>
-  <div class="container text-center">
-    <h1>KrunosPad</h1>
-    <form onsubmit="onGo(event)">
-        <div class="input-group  input-group-lg mb-3 ">
-            <input type="text" class="form-control" id="input-go" placeholder="Enter with a endpoint" aria-label="Enter with a endpoint" aria-describedby="button-addon2">
-            <div class="input-group-append">
-              <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Go</button>
+    <div class="container text-center">
+        <h1>KrunosPad</h1>
+        <form id="goForm">
+            <div class="input-group input-group-lg mb-3">
+                <input type="text" class="form-control" id="input-go" placeholder="Enter with an endpoint" aria-label="Enter with an endpoint" aria-describedby="button-addon2">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Go</button>
+                </div>
             </div>
-          </div>
-      </form>
-      <div class="container text-left sub-header">
-        <div>
-            Don't login, just use a URL
+        </form>
+        <div class="container text-left sub-header">
+            <div>Don't login, just use a URL</div>
+            <div>Don't save, text is auto-saved</div>
+            <div>Don't juggle attached files, edit online with your friends</div>
+            <div>Don't lose your content, download with YourURL.zip</div>
+            <div>Don't forget, you can use yourURL/yourFolder/yourSubfolder</div>
+            <div>Krunos! :)</div>
+            <div class="text-center">📝📝📝📝📝📝📝📝📝📝📝📝📝📝</div>
         </div>
-        <div>
-            Don't save, text is auto-saved
-        </div>
-        <div>
-            Don't juggle attached files, edit online with your friends
-        </div>
-        <div>
-            Don't lose your content, download with YourURL.zip
-        </div>
-        <div>
-            Don't forget, you can use yourURL/yourFolder/yourSubfolder
-        </div>
-         <div>
-             Krunos! :)
-         </div>
-         <div class="text-center">
-           📝📝📝📝📝📝📝📝📝📝📝📝📝📝
-        </div>
-      </div>
-      <a target="_blank" href="https://github.com/bruno-1337/Krunos-pad">
-        <img src="/assets/github-logo.png" alt="">
-        Contribute
+        <a target="_blank" href="https://github.com/bruno-1337/Krunos-pad">
+            <img src="/assets/github-logo.png" alt="">
+            Contribute
         </a>
-  </div>
+    </div>
 </body>
 <style>
     body {
@@ -67,22 +54,4 @@
         text-decoration: none;
     }
 </style>
-<script>
-    window.onload = function(){
-        const socket = io();
-        socket.on('connect', function(){});
-        socket.on('event', function(data){});
-        socket.on('disconnect', function(){});
-        socket.on('update', (data) => {
-            document.querySelector('#input-area').value = data.content;
-        });
-        window.socket = socket;
-    }
-
-    function onGo(event) {
-        event.preventDefault();
-        const content = document.querySelector('#input-go').value;
-        window.location.replace(`/${content}`);
-    }
-</script>
 </html>
