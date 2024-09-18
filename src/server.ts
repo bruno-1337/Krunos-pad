@@ -5,8 +5,12 @@ import wsocket from './wsocket';
 import router from './router';
 import helmet from 'helmet';
 import db, { initializeDB } from './db';
+import csurf from 'csurf';
 
 const app = express();
+const csrfProtection = csurf({ cookie: true });
+
+app.use(csrfProtection);
 
 app.use(helmet());
 
