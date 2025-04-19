@@ -1,0 +1,26 @@
+# Project Rules
+
+## Technology Stack
+- This project uses **Bun** as the JavaScript runtime.
+- The primary language is **TypeScript**. Ensure strict type checking is adhered to.
+- The web framework is **Hono**. Follow Hono best practices for routing, middleware, and request/response handling.
+
+## Coding Style
+- Follow standard TypeScript and Hono conventions.
+- Prefer functional programming patterns where appropriate.
+- Use async/await for asynchronous operations.
+- Keep code modular and well-documented.
+- Use `bun install` for package management.
+- Use `bun run` for executing scripts defined in `package.json`.
+
+## Hono Specifics
+- Define routes clearly and logically.
+- Use Hono's built-in middleware or create custom middleware as needed.
+- Leverage Hono's context (`c`) object for request/response data and helpers.
+- Use Hono's built-in validation or libraries like Zod for request validation.
+
+## General Guidelines
+- Treat the user as an expert.
+- Be concise and provide code examples when explaining concepts or suggesting changes.
+- If unsure about a requirement, ask for clarification.
+- When providing code edits, show only the necessary changes with surrounding context using `// ... existing code ...`. 
