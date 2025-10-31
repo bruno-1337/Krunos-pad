@@ -11,6 +11,26 @@ interface PendingWrite {
 const pendingWrites = new Map<string, PendingWrite>();
 const WRITE_DEBOUNCE_MS = 1000;
 
+const FIRST_NAMES = [
+  'Naruto', 'Goku', 'Luffy', 'Link', 'Mario', 'Sonic', 'Cloud', 'Sephiroth',
+  'Pikachu', 'Kirby', 'Saitama', 'Ichigo', 'Edward', 'Eren', 'Levi', 'Spike',
+  'Vegeta', 'Kakashi', 'Zoro', 'Sasuke', 'Tanjiro', 'Gon', 'Killua', 'Deku',
+  'Geralt', 'Kratos', 'Master Chief', 'Samus', 'Steve', 'Sans'
+];
+
+const LAST_NAMES = [
+  'Uzumaki', 'Son', 'Monkey D.', 'Hero of Time', 'Plumber', 'Hedgehog', 'Strife', 'One-Winged',
+  'Ketchum', 'Star Warrior', 'One Punch', 'Kurosaki', 'Elric', 'Yeager', 'Ackerman', 'Spiegel',
+  'Prince', 'Hatake', 'Roronoa', 'Uchiha', 'Kamado', 'Freecss', 'Zoldyck', 'Midoriya',
+  'of Rivia', 'God of War', 'Spartan', 'Aran', 'Miner', 'Skeleton'
+];
+
+function generateRandomUsername(): string {
+  const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+  const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+  return `${firstName} ${lastName}`;
+}
+
 async function flushWrite(path: string): Promise<void> {
   const pending = pendingWrites.get(path);
   if (!pending) return;
@@ -30,11 +50,14 @@ async function flushWrite(path: string): Promise<void> {
 export default (socket: Socket) => {
   let currentRoom: string | null = null;
   const userId = socket.id;
+  let username: string;
 
-  socket.on('joinPad', (data: { path: string }) => {
+  socket.on('joinPad', (data: { path: string; requestedUsername?: string }) => {
     if (currentRoom) {
       socket.leave(currentRoom);
     }
+
+    username = data.requestedUsername || generateRandomUsername();
 
     const roomName = urlToDotPath(data.path);
     currentRoom = roomName;
@@ -43,10 +66,10 @@ export default (socket: Socket) => {
     const roomSockets = socket.nsp.adapter.rooms.get(roomName);
     const userCount = roomSockets ? roomSockets.size : 0;
 
-    socket.to(roomName).emit('userJoined', { userId, userCount });
-    socket.emit('roomJoined', { userCount, userId });
+    socket.to(roomName).emit('userJoined', { userId, username, userCount });
+    socket.emit('roomJoined', { userCount, userId, username });
 
-    console.log(`User ${userId} joined room ${roomName}. Total users: ${userCount}`);
+    console.log(`User ${username} (${userId}) joined room ${roomName}. Total users: ${userCount}`);
   });
 
   socket.on('broadcast', (data: { path: string; content: string }) => {
@@ -98,6 +121,7 @@ export default (socket: Socket) => {
     
     socket.to(normalizedPath).emit('cursorUpdate', {
       userId,
+      username,
       position: data.position,
       selection: data.selection
     });

@@ -812,7 +812,7 @@ body {
 
 .remote-cursor-container {
     position: absolute;
-    pointer-events: none;
+    pointer-events: auto;
     z-index: 1000;
     transition: opacity var(--transition-fast);
 }
@@ -822,7 +822,6 @@ body {
     width: 2px;
     height: calc(1em * 1.6);
     border-left: 2px solid #FF6B6B;
-    pointer-events: none;
     animation: blink 1s ease-in-out infinite;
 }
 
@@ -837,6 +836,41 @@ body {
     border: 2px solid currentColor;
     border-radius: 50%;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+.remote-cursor::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 20px;
+    height: calc(100% + 20px);
+    pointer-events: auto;
+}
+
+.remote-cursor-label {
+    position: absolute;
+    top: -28px;
+    left: 0;
+    padding: 0.25rem 0.5rem;
+    background-color: #FF6B6B;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-md);
+    z-index: 1001;
+}
+
+.remote-cursor:hover .remote-cursor-label,
+.remote-cursor-container:hover .remote-cursor-label {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 @keyframes blink {

@@ -4,20 +4,77 @@ const remoteCursors = new Map();
 let myUserId = null;
 let isUpdatingFromRemote = false;
 
+function cleanupOldUsernames() {
+    const now = Date.now();
+    const keys = Object.keys(localStorage);
+    
+    keys.forEach(key => {
+        if (key.startsWith('username_')) {
+            try {
+                const data = JSON.parse(localStorage.getItem(key));
+                if (now - data.timestamp > 3600000) {
+                    localStorage.removeItem(key);
+                }
+            } catch (e) {
+                localStorage.removeItem(key);
+            }
+        }
+    });
+}
+
+function getStoredUsername(path) {
+    const key = `username_${path}`;
+    const stored = localStorage.getItem(key);
+    
+    if (stored) {
+        try {
+            const data = JSON.parse(stored);
+            const now = Date.now();
+            
+            if (now - data.timestamp < 3600000) {
+                return data.username;
+            } else {
+                localStorage.removeItem(key);
+            }
+        } catch (e) {
+            localStorage.removeItem(key);
+        }
+    }
+    
+    return null;
+}
+
+function storeUsername(path, username) {
+    const key = `username_${path}`;
+    const data = {
+        username: username,
+        timestamp: Date.now()
+    };
+    localStorage.setItem(key, JSON.stringify(data));
+}
+
 window.onload = function() {
+    cleanupOldUsernames();
+    
     const socket = io();
     
     socket.on('connect', function(){
         const inputArea = document.querySelector('#input-area');
         if (inputArea) {
             const path = window.location.pathname;
-            socket.emit('joinPad', { path });
+            const storedUsername = getStoredUsername(path);
+            socket.emit('joinPad', { path, requestedUsername: storedUsername });
         }
     });
     
     socket.on('roomJoined', (data) => {
         myUserId = data.userId;
         updateUserCount(data.userCount);
+        
+        if (data.username) {
+            const path = window.location.pathname;
+            storeUsername(path, data.username);
+        }
     });
     
     socket.on('userJoined', (data) => {
@@ -49,7 +106,7 @@ window.onload = function() {
     });
     
     socket.on('cursorUpdate', (data) => {
-        updateRemoteCursor(data.userId, data.position, data.selection);
+        updateRemoteCursor(data.userId, data.position, data.selection, data.username);
     });
     
     socket.on('passwordSet', (data) => {
@@ -339,7 +396,7 @@ function getTextPositionCoordinates(textarea, position) {
     };
 }
 
-function updateRemoteCursor(userId, position, selection) {
+function updateRemoteCursor(userId, position, selection, username) {
     const inputArea = document.querySelector('#input-area');
     if (!inputArea) return;
     
@@ -355,6 +412,12 @@ function updateRemoteCursor(userId, position, selection) {
         const color = colors[colorIndex];
         cursorElement.style.borderLeftColor = color;
         cursorElement.style.color = color;
+        
+        const usernameLabel = document.createElement('div');
+        usernameLabel.className = 'remote-cursor-label';
+        usernameLabel.textContent = username || 'Anonymous';
+        usernameLabel.style.backgroundColor = color;
+        cursorElement.appendChild(usernameLabel);
         
         const cursorContainer = document.createElement('div');
         cursorContainer.className = 'remote-cursor-container';
