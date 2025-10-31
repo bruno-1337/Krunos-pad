@@ -136,6 +136,14 @@ export default (socket: Socket) => {
 
   socket.on('disconnect', () => {
     if (currentRoom) {
+      if (pendingWrites.has(currentRoom)) {
+        const pending = pendingWrites.get(currentRoom);
+        if (pending) {
+          clearTimeout(pending.timeout);
+          flushWrite(currentRoom);
+        }
+      }
+
       const roomSockets = socket.nsp.adapter.rooms.get(currentRoom);
       const userCount = roomSockets ? roomSockets.size : 0;
 
