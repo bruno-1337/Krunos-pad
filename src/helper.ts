@@ -1,4 +1,4 @@
-const urlToDotPath = (url: string): string => {
+const pathToRoomName = (url: string): string => {
     if (!url) return '/';
     url += "/content";
     return url
@@ -7,4 +7,4 @@ const urlToDotPath = (url: string): string => {
         .replace(/^\./g, "");
 };
 
-export default urlToDotPath;
+export default pathToRoomName;

@@ -1,4 +1,4 @@
-import urlToDotPath from './helper';
+import pathToRoomName from './helper';
 import { Socket } from 'socket.io';
 import Pad from './Models/Pad';
 import { z } from 'zod';
@@ -109,7 +109,7 @@ export default (socket: TypedSocket) => {
 
       username = validated.requestedUsername || generateRandomUsername();
 
-      const roomName = urlToDotPath(validated.path);
+      const roomName = pathToRoomName(validated.path);
       currentRoom = roomName;
       socket.join(roomName);
 
@@ -129,7 +129,7 @@ export default (socket: TypedSocket) => {
   socket.on('broadcast', (data: unknown) => {
     try {
       const validated = contentUpdateSchema.parse(data);
-      const normalizedPath = urlToDotPath(validated.path);
+      const normalizedPath = pathToRoomName(validated.path);
       const updateData = createUpdateData(validated.content, userId);
       socket.to(normalizedPath).emit('update', updateData);
     } catch (error) {
@@ -140,7 +140,7 @@ export default (socket: TypedSocket) => {
   socket.on('update', async (data: unknown) => {
     try {
       const validated = contentUpdateSchema.parse(data);
-      const normalizedPath = urlToDotPath(validated.path);
+      const normalizedPath = pathToRoomName(validated.path);
       
       if (pendingWrites.has(normalizedPath)) {
         clearTimeout(pendingWrites.get(normalizedPath)!.timeout);
@@ -166,7 +166,7 @@ export default (socket: TypedSocket) => {
   socket.on('cursorMove', (data: unknown) => {
     try {
       const validated = cursorMoveSchema.parse(data);
-      const normalizedPath = urlToDotPath(validated.path);
+      const normalizedPath = pathToRoomName(validated.path);
       
       socket.to(normalizedPath).emit('cursorUpdate', {
         userId,
@@ -182,7 +182,7 @@ export default (socket: TypedSocket) => {
   socket.on('setPassword', async (data: unknown) => {
     try {
       const validated = setPasswordSchema.parse(data);
-      const normalizedPath = urlToDotPath(validated.path);
+      const normalizedPath = pathToRoomName(validated.path);
       const pad = new Pad();
       
       const existingPad = await pad.find(normalizedPath);
