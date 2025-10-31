@@ -5,6 +5,7 @@ import wsocket from './wsocket';
 import router from './router';
 import helmet from 'helmet';
 import db, { initializeDB } from './db';
+import type { ServerToClientEvents, ClientToServerEvents, InterServerEvents, SocketData } from './types/socket';
 
 const app = express();
 
@@ -35,6 +36,6 @@ if (process.argv[2] === '--port' && process.argv[3]) {
     console.log(`📝 KrunosPad works on port ${port} 📝`);
   });
 
-  const io = new Server(server);
+  const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(server);
   io.on('connection', wsocket);
 })();

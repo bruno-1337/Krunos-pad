@@ -2,6 +2,7 @@ import urlToDotPath from './helper';
 import { Socket } from 'socket.io';
 import Pad from './Models/Pad';
 import { z } from 'zod';
+import type { ServerToClientEvents, ClientToServerEvents, InterServerEvents, SocketData } from './types/socket';
 
 interface PendingWrite {
   path: string;
@@ -91,7 +92,9 @@ async function flushWrite(path: string): Promise<void> {
   }
 }
 
-export default (socket: Socket) => {
+type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
+
+export default (socket: TypedSocket) => {
   let currentRoom: string | null = null;
   const userId = socket.id;
   let username: string;
