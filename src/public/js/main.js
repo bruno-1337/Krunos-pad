@@ -1,22 +1,55 @@
 // main.js
 
+const remoteCursors = new Map();
+let myUserId = null;
+let isUpdatingFromRemote = false;
+
 window.onload = function() {
     const socket = io();
     
-    socket.on('connect', function(){});
-    socket.on('event', function(data){});
-    socket.on('disconnect', function(){});
+    socket.on('connect', function(){
+        const inputArea = document.querySelector('#input-area');
+        if (inputArea) {
+            const path = window.location.pathname;
+            socket.emit('joinPad', { path });
+        }
+    });
+    
+    socket.on('roomJoined', (data) => {
+        myUserId = data.userId;
+        updateUserCount(data.userCount);
+    });
+    
+    socket.on('userJoined', (data) => {
+        updateUserCount(data.userCount);
+    });
+    
+    socket.on('userLeft', (data) => {
+        updateUserCount(data.userCount);
+        removeRemoteCursor(data.userId);
+    });
     
     socket.on('update', (data) => {
         const inputArea = document.querySelector('#input-area');
-        if (inputArea) {
+        if (inputArea && data.userId !== myUserId) {
+            isUpdatingFromRemote = true;
+            const cursorPosition = inputArea.selectionStart;
             inputArea.value = data.content;
+            inputArea.setSelectionRange(cursorPosition, cursorPosition);
+            setTimeout(() => { 
+                isUpdatingFromRemote = false;
+                updateAllRemoteCursors();
+            }, 50);
         }
         const lastUpdatedElement = document.querySelector('#lastUpdated');
         if (lastUpdatedElement) {
             lastUpdatedElement.innerText = new Date(data.padData.lastUpdated).toLocaleString();
             lastUpdatedElement.setAttribute('datetime', data.padData.lastUpdated);
         }
+    });
+    
+    socket.on('cursorUpdate', (data) => {
+        updateRemoteCursor(data.userId, data.position, data.selection);
     });
     
     socket.on('passwordSet', (data) => {
@@ -31,7 +64,10 @@ window.onload = function() {
     initializeTheme();
     initializeFontSettings();
     initializePagePath();
+    initializePageTitle();
     attachEventListeners();
+    
+    window.addEventListener('resize', updateAllRemoteCursors);
 
     window.socket = socket;
 }
@@ -71,11 +107,26 @@ function initializePagePath() {
     }
 }
 
+function initializePageTitle() {
+    const path = window.location.pathname;
+    if (path && path !== '/') {
+        document.title = path.replace('/', '') + ' | KPad';
+    }
+}
+
 function attachEventListeners() {
     const inputAreaElement = document.getElementById('input-area');
     if (inputAreaElement) {
-        inputAreaElement.addEventListener('keyup', sendData);
+        inputAreaElement.addEventListener('input', sendData);
         inputAreaElement.addEventListener('input', showSavingIndicator);
+        inputAreaElement.addEventListener('input', updateAllRemoteCursors);
+        inputAreaElement.addEventListener('input', handleCursorMove);
+        inputAreaElement.addEventListener('click', () => handleCursorMove(true));
+        inputAreaElement.addEventListener('keydown', handleCursorMove);
+        inputAreaElement.addEventListener('keyup', handleCursorMove);
+        inputAreaElement.addEventListener('select', () => handleCursorMove(true));
+        inputAreaElement.addEventListener('scroll', updateAllRemoteCursors);
+        inputAreaElement.addEventListener('blur', () => handleCursorMove(true));
     }
 
     const goForm = document.getElementById('goForm');
@@ -171,17 +222,215 @@ function showSavedIndicator() {
 }
 
 function sendData() {
+    if (isUpdatingFromRemote) return;
+    
     const content = document.querySelector('#input-area').value;
     const path = window.location.pathname;
     
-    if (window.bounceTimeOut) {
-        clearTimeout(window.bounceTimeOut);
+    // Immediate broadcast to other users (no DB save)
+    if (window.broadcastTimeout) {
+        clearTimeout(window.broadcastTimeout);
     }
     
-    window.bounceTimeOut = setTimeout(() => {
+    window.broadcastTimeout = setTimeout(() => {
+        socket.emit('broadcast', { path, content });
+    }, 50);
+    
+    // Delayed save to database
+    if (window.saveTimeout) {
+        clearTimeout(window.saveTimeout);
+    }
+    
+    window.saveTimeout = setTimeout(() => {
         socket.emit('update', { path, content });
         showSavedIndicator();
     }, 1000);
+}
+
+function handleCursorMove(immediate = false) {
+    if (isUpdatingFromRemote) return;
+    
+    const inputArea = document.querySelector('#input-area');
+    if (!inputArea) return;
+    
+    const position = inputArea.selectionStart;
+    const path = window.location.pathname;
+    
+    const selection = inputArea.selectionStart !== inputArea.selectionEnd ? {
+        start: inputArea.selectionStart,
+        end: inputArea.selectionEnd
+    } : undefined;
+    
+    if (window.cursorMoveTimeout) {
+        clearTimeout(window.cursorMoveTimeout);
+    }
+    
+    if (immediate) {
+        socket.emit('cursorMove', { path, position, selection });
+    } else {
+        window.cursorMoveTimeout = setTimeout(() => {
+            socket.emit('cursorMove', { path, position, selection });
+        }, 50);
+    }
+}
+
+function updateUserCount(count) {
+    let userCountElement = document.querySelector('#userCount');
+    
+    if (!userCountElement) {
+        const toolbar = document.querySelector('.toolbar-left');
+        if (toolbar) {
+            userCountElement = document.createElement('div');
+            userCountElement.id = 'userCount';
+            userCountElement.className = 'user-count';
+            toolbar.insertBefore(userCountElement, toolbar.firstChild);
+        }
+    }
+    
+    if (userCountElement) {
+        const plural = count === 1 ? 'user' : 'users';
+        userCountElement.textContent = `${count} ${plural} online`;
+        userCountElement.className = 'user-count';
+        if (count > 1) {
+            userCountElement.classList.add('multiple-users');
+        }
+    }
+}
+
+function getTextPositionCoordinates(textarea, position) {
+    const div = document.createElement('div');
+    const styles = getComputedStyle(textarea);
+    const rect = textarea.getBoundingClientRect();
+    
+    div.style.position = 'absolute';
+    div.style.visibility = 'hidden';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.wordWrap = 'break-word';
+    div.style.top = rect.top + 'px';
+    div.style.left = rect.left + 'px';
+    div.style.pointerEvents = 'none';
+    
+    div.style.fontSize = styles.fontSize;
+    div.style.fontFamily = styles.fontFamily;
+    div.style.fontWeight = styles.fontWeight;
+    div.style.lineHeight = styles.lineHeight;
+    div.style.letterSpacing = styles.letterSpacing;
+    div.style.padding = styles.padding;
+    div.style.border = styles.border;
+    div.style.width = textarea.clientWidth + 'px';
+    div.style.boxSizing = styles.boxSizing;
+    
+    document.body.appendChild(div);
+    
+    const textBeforeCursor = textarea.value.substring(0, position);
+    div.textContent = textBeforeCursor;
+    
+    const span = document.createElement('span');
+    span.textContent = '\u200b';
+    div.appendChild(span);
+    
+    const spanRect = span.getBoundingClientRect();
+    
+    document.body.removeChild(div);
+    
+    return {
+        left: spanRect.left - rect.left,
+        top: spanRect.top - rect.top
+    };
+}
+
+function updateRemoteCursor(userId, position, selection) {
+    const inputArea = document.querySelector('#input-area');
+    if (!inputArea) return;
+    
+    let cursorElement = remoteCursors.get(userId);
+    
+    if (!cursorElement) {
+        cursorElement = document.createElement('div');
+        cursorElement.className = 'remote-cursor';
+        cursorElement.dataset.userId = userId;
+        
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+        const colorIndex = Array.from(userId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+        const color = colors[colorIndex];
+        cursorElement.style.borderLeftColor = color;
+        cursorElement.style.color = color;
+        
+        const cursorContainer = document.createElement('div');
+        cursorContainer.className = 'remote-cursor-container';
+        cursorContainer.appendChild(cursorElement);
+        inputArea.parentElement.appendChild(cursorContainer);
+        
+        remoteCursors.set(userId, cursorElement);
+    }
+    
+    cursorElement.dataset.position = position;
+    
+    const coords = getTextPositionCoordinates(inputArea, position);
+    const container = cursorElement.parentElement;
+    
+    if (container) {
+        container.style.left = coords.left + 'px';
+        container.style.top = coords.top + 'px';
+        container.style.display = 'block';
+    }
+    
+    if (cursorElement.hideTimeout) {
+        clearTimeout(cursorElement.hideTimeout);
+    }
+    
+    cursorElement.hideTimeout = setTimeout(() => {
+        if (container) {
+            container.style.opacity = '0.3';
+        }
+    }, 3000);
+    
+    if (container) {
+        container.style.opacity = '1';
+    }
+}
+
+function removeRemoteCursor(userId) {
+    const cursorElement = remoteCursors.get(userId);
+    if (cursorElement) {
+        const container = cursorElement.parentElement;
+        if (container) {
+            container.remove();
+        }
+        remoteCursors.delete(userId);
+    }
+}
+
+let updateCursorsTimeout;
+let updateCursorsFrame;
+function updateAllRemoteCursors() {
+    if (remoteCursors.size === 0) return;
+    
+    if (updateCursorsTimeout) {
+        clearTimeout(updateCursorsTimeout);
+    }
+    
+    if (updateCursorsFrame) {
+        cancelAnimationFrame(updateCursorsFrame);
+    }
+    
+    updateCursorsFrame = requestAnimationFrame(() => {
+        const inputArea = document.querySelector('#input-area');
+        if (!inputArea) return;
+        
+        remoteCursors.forEach((cursorElement, userId) => {
+            const position = cursorElement.dataset.position;
+            if (position !== undefined) {
+                const coords = getTextPositionCoordinates(inputArea, parseInt(position));
+                const container = cursorElement.parentElement;
+                
+                if (container) {
+                    container.style.left = coords.left + 'px';
+                    container.style.top = coords.top + 'px';
+                }
+            }
+        });
+    });
 }
 
 function toggleTheme() {
@@ -201,6 +450,7 @@ function toggleFontStyle() {
         
         const fontStyle = isMonospace ? 'monospace' : 'sans-serif';
         localStorage.setItem('fontStyle', fontStyle);
+        setTimeout(updateAllRemoteCursors, 50);
     }
 }
 
@@ -210,6 +460,7 @@ function changeFontSize() {
     if (inputArea) {
         inputArea.style.fontSize = fontSize;
         localStorage.setItem('fontSize', fontSize);
+        setTimeout(updateAllRemoteCursors, 50);
     }
 }
 
