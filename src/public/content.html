@@ -6,42 +6,138 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/main.js" defer></script>
-    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <title>KrunosPad</title>
     <script>
         document.title = window.location.pathname.replace('/', '') + ' | KPad';
     </script>
 </head>
-<body>
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center my-2">
-            <div>
-                <button class="btn btn-secondary" id="setPasswordButton">Set Password</button>
-                <label for="fontSizeSelect">Font Size:</label>
-                <select id="fontSizeSelect">
-                    <option value="16px">Small</option>
-                    <option value="22px" selected>Medium</option>
-                    <option value="28px">Large</option>
-                </select>
+<body class="editor-page">
+    <div class="editor-container">
+        <header class="editor-header">
+            <div class="header-left">
+                <a href="/" class="logo-link" aria-label="Go to home">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                </a>
+                <span class="page-path" id="pagePath"></span>
             </div>
-            <div>
-                <span>Last Updated: <span id="lastUpdated"><%= new Date(lastUpdated).toLocaleString() %></span></span>
+            
+            <div class="header-center">
+                <div class="save-indicator" id="saveIndicator">
+                    <svg class="save-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span class="save-text">Saved</span>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="toolbar-group">
+                    <button class="icon-button" id="fontToggle" title="Toggle font style" aria-label="Toggle font style">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="4 7 4 4 20 4 20 7"/>
+                            <line x1="9" y1="20" x2="15" y2="20"/>
+                            <line x1="12" y1="4" x2="12" y2="20"/>
+                        </svg>
+                    </button>
+                    
+                    <select id="fontSizeSelect" class="font-size-select" aria-label="Select font size">
+                        <option value="14px">Small</option>
+                        <option value="16px">Default</option>
+                        <option value="18px">Medium</option>
+                        <option value="22px">Large</option>
+                        <option value="26px">XL</option>
+                    </select>
+
+                    <button class="icon-button" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+                        <svg class="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                        <svg class="theme-icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+
+                    <button class="icon-button" id="setPasswordButton" title="Set password" aria-label="Set password protection">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="last-updated" id="lastUpdatedContainer">
+                    <span class="last-updated-label">Updated:</span>
+                    <time id="lastUpdated" datetime="<%= lastUpdated %>"><%= new Date(lastUpdated).toLocaleString() %></time>
+                </div>
+            </div>
+        </header>
+
+        <main class="editor-main">
+            <textarea 
+                id="input-area" 
+                class="editor-textarea" 
+                placeholder="Start typing..."
+                aria-label="Note content"
+                spellcheck="true"
+            ><%= content %></textarea>
+        </main>
+    </div>
+
+    <div class="modal" id="passwordModal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title">Set Password</h2>
+                <button class="modal-close" id="modalClose" aria-label="Close modal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">Protect this pad with a password. You'll need it to access this page in the future.</p>
+                <form id="setPasswordForm" class="password-form">
+                    <div class="form-group">
+                        <label for="newPassword" class="form-label">Password</label>
+                        <input 
+                            type="password" 
+                            id="newPassword" 
+                            class="form-input" 
+                            required
+                            minlength="4"
+                            autocomplete="new-password"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword" class="form-label">Confirm Password</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            class="form-input" 
+                            required
+                            minlength="4"
+                            autocomplete="new-password"
+                        >
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="button button-secondary" id="modalCancel">Cancel</button>
+                        <button type="submit" class="button button-primary">Set Password</button>
+                    </div>
+                </form>
             </div>
         </div>
-        <textarea id="input-area" cols="30" rows="10"><%= content %></textarea>
     </div>
 </body>
-<style>
-    body {
-        margin: 0;
-        padding: 0;
-    }
-    textarea {
-        width: 100%;
-        height: calc(100vh - 70px);
-        margin: 0;
-        padding: 0;
-        font-size: 22px;
-    }
-</style>
 </html>
