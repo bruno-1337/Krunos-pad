@@ -12,6 +12,7 @@ const SAVE_INDICATOR_DURATION_MS = 2000;
 const FOCUS_DELAY_MS = 100;
 const CURSOR_UPDATE_DELAY_MS = 50;
 const MIN_PASSWORD_LENGTH = 4;
+const MAX_PASSWORD_LENGTH = 128;
 
 const remoteCursors = new Map();
 let myUserId = null;
@@ -580,6 +581,11 @@ function submitPasswordModal(event) {
     
     if (newPassword.length < MIN_PASSWORD_LENGTH) {
         showNotification(`Password must be at least ${MIN_PASSWORD_LENGTH} characters!`, 'error');
+        return;
+    }
+    
+    if (newPassword.length > MAX_PASSWORD_LENGTH) {
+        showNotification(`Password must be at most ${MAX_PASSWORD_LENGTH} characters!`, 'error');
         return;
     }
     

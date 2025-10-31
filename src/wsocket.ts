@@ -1,6 +1,7 @@
 import urlToDotPath from './helper';
 import { Socket } from 'socket.io';
 import Pad from './Models/Pad';
+import { z } from 'zod';
 
 interface PendingWrite {
   path: string;
@@ -10,6 +11,33 @@ interface PendingWrite {
 
 const pendingWrites = new Map<string, PendingWrite>();
 const WRITE_DEBOUNCE_MS = 1000;
+const MAX_CONTENT_LENGTH = 10 * 1024 * 1024;
+const MAX_PASSWORD_LENGTH = 128;
+const MIN_PASSWORD_LENGTH = 4;
+
+const joinPadSchema = z.object({
+  path: z.string().min(1).max(1000),
+  requestedUsername: z.string().max(100).optional()
+});
+
+const contentUpdateSchema = z.object({
+  path: z.string().min(1).max(1000),
+  content: z.string().max(MAX_CONTENT_LENGTH)
+});
+
+const cursorMoveSchema = z.object({
+  path: z.string().min(1).max(1000),
+  position: z.number().int().min(0),
+  selection: z.object({
+    start: z.number().int().min(0),
+    end: z.number().int().min(0)
+  }).optional()
+});
+
+const setPasswordSchema = z.object({
+  path: z.string().min(1).max(1000),
+  password: z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH)
+});
 
 const FIRST_NAMES = [
   'Naruto', 'Goku', 'Luffy', 'Link', 'Mario', 'Sonic', 'Cloud', 'Sephiroth',
@@ -68,73 +96,106 @@ export default (socket: Socket) => {
   const userId = socket.id;
   let username: string;
 
-  socket.on('joinPad', (data: { path: string; requestedUsername?: string }) => {
-    if (currentRoom) {
-      socket.leave(currentRoom);
-    }
-
-    username = data.requestedUsername || generateRandomUsername();
-
-    const roomName = urlToDotPath(data.path);
-    currentRoom = roomName;
-    socket.join(roomName);
-
-    const roomSockets = socket.nsp.adapter.rooms.get(roomName);
-    const userCount = roomSockets ? roomSockets.size : 0;
-
-    socket.to(roomName).emit('userJoined', { userId, username, userCount });
-    socket.emit('roomJoined', { userCount, userId, username });
-
-    console.log(`User ${username} (${userId}) joined room ${roomName}. Total users: ${userCount}`);
-  });
-
-  socket.on('broadcast', (data: { path: string; content: string }) => {
-    const normalizedPath = urlToDotPath(data.path);
-    const updateData = createUpdateData(data.content, userId);
-    socket.to(normalizedPath).emit('update', updateData);
-  });
-
-  socket.on('update', async (data: { path: string; content: string }) => {
-    const normalizedPath = urlToDotPath(data.path);
-    
-    if (pendingWrites.has(normalizedPath)) {
-      clearTimeout(pendingWrites.get(normalizedPath)!.timeout);
-    }
-
-    const timeout = setTimeout(() => {
-      flushWrite(normalizedPath);
-    }, WRITE_DEBOUNCE_MS);
-
-    pendingWrites.set(normalizedPath, {
-      path: normalizedPath,
-      content: data.content,
-      timeout
-    });
-
-    const updateData = createUpdateData(data.content, userId);
-    socket.to(normalizedPath).emit('update', updateData);
-  });
-
-  socket.on('cursorMove', (data: { path: string; position: number; selection?: { start: number; end: number } }) => {
-    const normalizedPath = urlToDotPath(data.path);
-    
-    socket.to(normalizedPath).emit('cursorUpdate', {
-      userId,
-      username,
-      position: data.position,
-      selection: data.selection
-    });
-  });
-
-  socket.on('setPassword', async (data: { path: string; password: string }) => {
+  socket.on('joinPad', (data: unknown) => {
     try {
-      const normalizedPath = urlToDotPath(data.path);
+      const validated = joinPadSchema.parse(data);
+      
+      if (currentRoom) {
+        socket.leave(currentRoom);
+      }
+
+      username = validated.requestedUsername || generateRandomUsername();
+
+      const roomName = urlToDotPath(validated.path);
+      currentRoom = roomName;
+      socket.join(roomName);
+
+      const roomSockets = socket.nsp.adapter.rooms.get(roomName);
+      const userCount = roomSockets ? roomSockets.size : 0;
+
+      socket.to(roomName).emit('userJoined', { userId, username, userCount });
+      socket.emit('roomJoined', { userCount, userId, username });
+
+      console.log(`User ${username} (${userId}) joined room ${roomName}. Total users: ${userCount}`);
+    } catch (error) {
+      console.error('Invalid joinPad data:', error);
+      socket.emit('error', { message: 'Invalid join data' });
+    }
+  });
+
+  socket.on('broadcast', (data: unknown) => {
+    try {
+      const validated = contentUpdateSchema.parse(data);
+      const normalizedPath = urlToDotPath(validated.path);
+      const updateData = createUpdateData(validated.content, userId);
+      socket.to(normalizedPath).emit('update', updateData);
+    } catch (error) {
+      console.error('Invalid broadcast data:', error);
+    }
+  });
+
+  socket.on('update', async (data: unknown) => {
+    try {
+      const validated = contentUpdateSchema.parse(data);
+      const normalizedPath = urlToDotPath(validated.path);
+      
+      if (pendingWrites.has(normalizedPath)) {
+        clearTimeout(pendingWrites.get(normalizedPath)!.timeout);
+      }
+
+      const timeout = setTimeout(() => {
+        flushWrite(normalizedPath);
+      }, WRITE_DEBOUNCE_MS);
+
+      pendingWrites.set(normalizedPath, {
+        path: normalizedPath,
+        content: validated.content,
+        timeout
+      });
+
+      const updateData = createUpdateData(validated.content, userId);
+      socket.to(normalizedPath).emit('update', updateData);
+    } catch (error) {
+      console.error('Invalid update data:', error);
+    }
+  });
+
+  socket.on('cursorMove', (data: unknown) => {
+    try {
+      const validated = cursorMoveSchema.parse(data);
+      const normalizedPath = urlToDotPath(validated.path);
+      
+      socket.to(normalizedPath).emit('cursorUpdate', {
+        userId,
+        username,
+        position: validated.position,
+        selection: validated.selection
+      });
+    } catch (error) {
+      console.error('Invalid cursorMove data:', error);
+    }
+  });
+
+  socket.on('setPassword', async (data: unknown) => {
+    try {
+      const validated = setPasswordSchema.parse(data);
+      const normalizedPath = urlToDotPath(validated.path);
       const pad = new Pad();
-      await pad.setPassword(normalizedPath, data.password);
+      
+      const existingPad = await pad.find(normalizedPath);
+      if (!existingPad) {
+        socket.emit('passwordSet', { success: false, error: 'Pad does not exist' });
+        return;
+      }
+      
+      await pad.setPassword(normalizedPath, validated.password);
       socket.emit('passwordSet', { success: true });
     } catch (error) {
       console.error('Failed to set password:', error);
-      socket.emit('passwordSet', { success: false, error: 'Failed to set password' });
+      const errorMessage = error instanceof z.ZodError 
+        ? 'Invalid password data' 
+        : 'Failed to set password';
+      socket.emit('passwordSet', { success: false, error: errorMessage });
     }
   });
 
