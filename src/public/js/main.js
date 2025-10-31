@@ -114,7 +114,8 @@ window.onload = function() {
             showNotification('Password set successfully!', 'success');
             closePasswordModal();
         } else {
-            showNotification('Failed to set password.', 'error');
+            const errorMessage = data.error || 'Failed to set password.';
+            showNotification(errorMessage, 'error');
         }
     });
 

@@ -35,16 +35,21 @@ async function flushWrite(path: string): Promise<void> {
   const pending = pendingWrites.get(path);
   if (!pending) return;
 
-  const pad = new Pad();
-  await pad.save({
-    path,
-    padData: {
-      content: pending.content,
-      lastUpdated: new Date().toISOString()
-    }
-  });
+  try {
+    const pad = new Pad();
+    await pad.save({
+      path,
+      padData: {
+        content: pending.content,
+        lastUpdated: new Date().toISOString()
+      }
+    });
 
-  pendingWrites.delete(path);
+    pendingWrites.delete(path);
+  } catch (error) {
+    console.error(`Failed to save pad at ${path}:`, error);
+    pendingWrites.delete(path);
+  }
 }
 
 export default (socket: Socket) => {
@@ -128,10 +133,15 @@ export default (socket: Socket) => {
   });
 
   socket.on('setPassword', async (data: { path: string; password: string }) => {
-    const normalizedPath = urlToDotPath(data.path);
-    const pad = new Pad();
-    await pad.setPassword(normalizedPath, data.password);
-    socket.emit('passwordSet', { success: true });
+    try {
+      const normalizedPath = urlToDotPath(data.path);
+      const pad = new Pad();
+      await pad.setPassword(normalizedPath, data.password);
+      socket.emit('passwordSet', { success: true });
+    } catch (error) {
+      console.error('Failed to set password:', error);
+      socket.emit('passwordSet', { success: false, error: 'Failed to set password' });
+    }
   });
 
   socket.on('disconnect', () => {
@@ -140,7 +150,9 @@ export default (socket: Socket) => {
         const pending = pendingWrites.get(currentRoom);
         if (pending) {
           clearTimeout(pending.timeout);
-          flushWrite(currentRoom);
+          flushWrite(currentRoom).catch(error => {
+            console.error('Failed to flush write on disconnect:', error);
+          });
         }
       }
 
