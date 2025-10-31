@@ -1,27 +1,21 @@
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
+import { Database } from 'bun:sqlite';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { pads } from './schema';
 
-interface PadData {
-  content: string;
-  password?: string;
-  lastUpdated: string;
-}
-
-interface Data {
-  pads: { [key: string]: PadData };
-}
-
-const adapter = new JSONFile<Data>('db.json');
-const db = new Low<Data>(adapter, { pads: {} }); // Provide default data here
+const sqlite = new Database('data.db');
+export const db = drizzle(sqlite);
 
 export const initializeDB = async (): Promise<void> => {
-  await db.read();
-
-  if (db.data === undefined) {
-    db.data = { pads: {} };
-    console.log('Database was empty, initialized with default data.');
-    await db.write();
-  }
+  sqlite.run(`
+    CREATE TABLE IF NOT EXISTS pads (
+      path TEXT PRIMARY KEY,
+      content TEXT NOT NULL DEFAULT '',
+      password TEXT,
+      last_updated INTEGER NOT NULL
+    )
+  `);
+  console.log('Database initialized');
 };
 
+export { pads };
 export default db;

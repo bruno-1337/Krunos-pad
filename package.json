@@ -3,9 +3,10 @@
   "module": "src/server.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest",
     "@types/bcryptjs": "^2.4.2",
+    "@types/bun": "latest",
     "@types/jasmine": "^5.0.2",
+    "drizzle-kit": "^0.31.6",
     "jasmine": "^5.3.0",
     "nodemon": "^3.1.4"
   },
@@ -16,20 +17,22 @@
     "@types/bootstrap": "^5.2.10",
     "@types/ejs": "^3.1.5",
     "@types/express": "^4.17.21",
-    "@types/lowdb": "^1.0.15",
     "@types/socket.io": "^3.0.2",
     "bcryptjs": "^2.4.3",
     "bootstrap": "^5.3.3",
+    "drizzle-orm": "^0.44.7",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
     "helmet": "^6.0.1",
-    "lowdb": "^7.0.1",
     "socket.io": "^4.7.5"
   },
   "scripts": {
     "start": "bun src/server.ts",
     "dev": "nodemon --exec 'bun' src/server.ts",
     "test": "bun jasmine",
-    "test:watch": "nodemon --exec 'bun jasmine'"
+    "test:watch": "nodemon --exec 'bun jasmine'",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   }
 }
