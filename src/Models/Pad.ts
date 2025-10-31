@@ -2,6 +2,8 @@ import { db, pads } from '../db';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
+const BCRYPT_SALT_ROUNDS = 10;
+
 interface PadData {
   content: string;
   password?: string;
@@ -53,7 +55,7 @@ class Pad {
   }
 
   async setPassword(path: string, password: string): Promise<void> {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
     
     await db
       .update(pads)

@@ -1,5 +1,18 @@
 // main.js
 
+const USERNAME_EXPIRY_MS = 3600000;
+const REMOTE_UPDATE_DELAY_MS = 50;
+const SAVE_DEBOUNCE_MS = 1000;
+const BROADCAST_DEBOUNCE_MS = 50;
+const CURSOR_MOVE_DEBOUNCE_MS = 50;
+const CURSOR_FADE_DELAY_MS = 3000;
+const NOTIFICATION_DURATION_MS = 3000;
+const NOTIFICATION_FADE_MS = 300;
+const SAVE_INDICATOR_DURATION_MS = 2000;
+const FOCUS_DELAY_MS = 100;
+const CURSOR_UPDATE_DELAY_MS = 50;
+const MIN_PASSWORD_LENGTH = 4;
+
 const remoteCursors = new Map();
 let myUserId = null;
 let isUpdatingFromRemote = false;
@@ -12,7 +25,7 @@ function cleanupOldUsernames() {
         if (key.startsWith('username_')) {
             try {
                 const data = JSON.parse(localStorage.getItem(key));
-                if (now - data.timestamp > 3600000) {
+                if (now - data.timestamp > USERNAME_EXPIRY_MS) {
                     localStorage.removeItem(key);
                 }
             } catch (e) {
@@ -31,7 +44,7 @@ function getStoredUsername(path) {
             const data = JSON.parse(stored);
             const now = Date.now();
             
-            if (now - data.timestamp < 3600000) {
+            if (now - data.timestamp < USERNAME_EXPIRY_MS) {
                 return data.username;
             } else {
                 localStorage.removeItem(key);
@@ -96,7 +109,7 @@ window.onload = function() {
             setTimeout(() => { 
                 isUpdatingFromRemote = false;
                 updateAllRemoteCursors();
-            }, 50);
+            }, REMOTE_UPDATE_DELAY_MS);
         }
         const lastUpdatedElement = document.querySelector('#lastUpdated');
         if (lastUpdatedElement) {
@@ -275,7 +288,7 @@ function showSavedIndicator() {
         
         setTimeout(() => {
             saveIndicator.classList.remove('saved');
-        }, 2000);
+        }, SAVE_INDICATOR_DURATION_MS);
     }
 }
 
@@ -292,7 +305,7 @@ function sendData() {
     
     window.broadcastTimeout = setTimeout(() => {
         socket.emit('broadcast', { path, content });
-    }, 50);
+    }, BROADCAST_DEBOUNCE_MS);
     
     // Delayed save to database
     if (window.saveTimeout) {
@@ -302,7 +315,7 @@ function sendData() {
     window.saveTimeout = setTimeout(() => {
         socket.emit('update', { path, content });
         showSavedIndicator();
-    }, 1000);
+    }, SAVE_DEBOUNCE_MS);
 }
 
 function handleCursorMove(immediate = false) {
@@ -328,7 +341,7 @@ function handleCursorMove(immediate = false) {
     } else {
         window.cursorMoveTimeout = setTimeout(() => {
             socket.emit('cursorMove', { path, position, selection });
-        }, 50);
+        }, CURSOR_MOVE_DEBOUNCE_MS);
     }
 }
 
@@ -447,7 +460,7 @@ function updateRemoteCursor(userId, position, selection, username) {
         if (container) {
             container.style.opacity = '0.3';
         }
-    }, 3000);
+    }, CURSOR_FADE_DELAY_MS);
     
     if (container) {
         container.style.opacity = '1';
@@ -514,7 +527,7 @@ function toggleFontStyle() {
         
         const fontStyle = isMonospace ? 'monospace' : 'sans-serif';
         localStorage.setItem('fontStyle', fontStyle);
-        setTimeout(updateAllRemoteCursors, 50);
+        setTimeout(updateAllRemoteCursors, CURSOR_UPDATE_DELAY_MS);
     }
 }
 
@@ -524,7 +537,7 @@ function changeFontSize() {
     if (inputArea) {
         inputArea.style.fontSize = fontSize;
         localStorage.setItem('fontSize', fontSize);
-        setTimeout(updateAllRemoteCursors, 50);
+        setTimeout(updateAllRemoteCursors, CURSOR_UPDATE_DELAY_MS);
     }
 }
 
@@ -536,7 +549,7 @@ function openPasswordModal() {
         
         const firstInput = modal.querySelector('input');
         if (firstInput) {
-            setTimeout(() => firstInput.focus(), 100);
+            setTimeout(() => firstInput.focus(), FOCUS_DELAY_MS);
         }
     }
 }
@@ -565,8 +578,8 @@ function submitPasswordModal(event) {
         return;
     }
     
-    if (newPassword.length < 4) {
-        showNotification('Password must be at least 4 characters!', 'error');
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+        showNotification(`Password must be at least ${MIN_PASSWORD_LENGTH} characters!`, 'error');
         return;
     }
     
@@ -600,8 +613,8 @@ function showNotification(message, type = 'info') {
     
     setTimeout(() => {
         notification.style.animation = 'slideOutRight 0.3s ease-out';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+        setTimeout(() => notification.remove(), NOTIFICATION_FADE_MS);
+    }, NOTIFICATION_DURATION_MS);
 }
 
 function submitPassword(event) {
