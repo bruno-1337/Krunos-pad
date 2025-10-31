@@ -31,6 +31,17 @@ function generateRandomUsername(): string {
   return `${firstName} ${lastName}`;
 }
 
+function createUpdateData(content: string, userId: string) {
+  return {
+    content,
+    padData: {
+      content,
+      lastUpdated: new Date().toISOString()
+    },
+    userId
+  };
+}
+
 async function flushWrite(path: string): Promise<void> {
   const pending = pendingWrites.get(path);
   if (!pending) return;
@@ -79,16 +90,7 @@ export default (socket: Socket) => {
 
   socket.on('broadcast', (data: { path: string; content: string }) => {
     const normalizedPath = urlToDotPath(data.path);
-    
-    const updateData = {
-      content: data.content,
-      padData: {
-        content: data.content,
-        lastUpdated: new Date().toISOString()
-      },
-      userId
-    };
-
+    const updateData = createUpdateData(data.content, userId);
     socket.to(normalizedPath).emit('update', updateData);
   });
 
@@ -109,15 +111,7 @@ export default (socket: Socket) => {
       timeout
     });
 
-    const updateData = {
-      content: data.content,
-      padData: {
-        content: data.content,
-        lastUpdated: new Date().toISOString()
-      },
-      userId
-    };
-
+    const updateData = createUpdateData(data.content, userId);
     socket.to(normalizedPath).emit('update', updateData);
   });
 
