@@ -32,7 +32,7 @@ export interface ServerToClientEvents {
     selection?: {
       start: number;
       end: number;
-    };
+    } | null;
   }) => void;
   
   passwordSet: (data: {
@@ -48,7 +48,7 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   joinPad: (data: {
     path: string;
-    requestedUsername?: string;
+    requestedUsername?: string | null;
   }) => void;
   
   broadcast: (data: {
@@ -67,7 +67,7 @@ export interface ClientToServerEvents {
     selection?: {
       start: number;
       end: number;
-    };
+    } | null;
   }) => void;
   
   setPassword: (data: {

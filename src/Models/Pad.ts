@@ -1,17 +1,12 @@
 import { db, pads } from '../db';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import type { PadData, PadResponse } from '../types/pad';
 
 const BCRYPT_SALT_ROUNDS = 10;
 
-interface PadData {
-  content: string;
-  password?: string;
-  lastUpdated: string;
-}
-
 class Pad {
-  async find(path: string): Promise<{ path: string; padData: PadData } | false> {
+  async find(path: string): Promise<PadResponse | null> {
     const result = await db.select().from(pads).where(eq(pads.path, path)).get();
     
     if (result) {
@@ -24,10 +19,10 @@ class Pad {
         }
       };
     }
-    return false;
+    return null;
   }
 
-  async save(pad: { path: string; padData: PadData }): Promise<{ path: string; padData: PadData }> {
+  async save(pad: PadResponse): Promise<PadResponse> {
     const existingPad = await this.find(pad.path);
     
     if (existingPad) {

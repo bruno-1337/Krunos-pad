@@ -1,5 +1,5 @@
 const pathToRoomName = (url: string): string => {
-    if (!url) return '/';
+    if (!url) return 'content';
     url += "/content";
     return url
         .replace(/\/+/g, ".")

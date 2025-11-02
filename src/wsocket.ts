@@ -18,7 +18,7 @@ const MIN_PASSWORD_LENGTH = 4;
 
 const joinPadSchema = z.object({
   path: z.string().min(1).max(1000),
-  requestedUsername: z.string().max(100).optional()
+  requestedUsername: z.string().max(100).nullish()
 });
 
 const contentUpdateSchema = z.object({
@@ -32,7 +32,7 @@ const cursorMoveSchema = z.object({
   selection: z.object({
     start: z.number().int().min(0),
     end: z.number().int().min(0)
-  }).optional()
+  }).nullish()
 });
 
 const setPasswordSchema = z.object({
